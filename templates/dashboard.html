@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Welcome, {{ current_user.email }}</h1>
+    <div class="row mt-4">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Your Performance Trend</h5>
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Quick Actions</h5>
+                    <a href="{{ url_for('take_test') }}" class="btn btn-primary me-2">Take Test</a>
+                    <a href="{{ url_for('results') }}" class="btn btn-secondary">View Results</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+    const scoreData = {{ score_data|tojson }};
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: scoreData.labels,
+            datasets: [{
+                label: 'Test Scores',
+                data: scoreData.scores,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    title: {
+                        display: true,
+                        text: 'Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date/Time'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Your Test Score History'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

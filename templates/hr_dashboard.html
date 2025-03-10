@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>HR Dashboard - Test Results</h2>
+        <a href="{{ url_for('manage_questions') }}" class="btn btn-primary">Manage Questions</a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Average Daily Scores (Last 30 Days)</h5>
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Score Distribution</h5>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">User Performance Summary</h5>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User Email</th>
+                            <th>Average Score</th>
+                            <th>Total Tests Taken</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for email, data in user_performance.items() %}
+                        <tr>
+                            <td>{{ email }}</td>
+                            <td>{{ "%.2f"|format(data.average) }}</td>
+                            <td>{{ data.total_tests }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="showUserChart('{{ email }}')">
+                                    View Performance Graph
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for user-specific chart -->
+    <div class="modal fade" id="userChartModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">User Performance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="userChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if results %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Detailed Results</h5>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User Email</th>
+                            <th>Date</th>
+                            <th>Score</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>{{ result.user.email }}</td>
+                            <td>{{ result.date_taken.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ result.score }}</td>
+                            <td>{{ (result.score / 5 * 100)|round(2) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No test results available yet.
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendData = {{ trend_data|tojson }};
+    
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendData.labels,
+            datasets: [{
+                label: 'Average Score',
+                data: trendData.averages,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    title: {
+                        display: true,
+                        text: 'Average Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+
+    // Distribution Chart
+    const distCtx = document.getElementById('distributionChart').getContext('2d');
+    const distData = {{ distribution_data|tojson }};
+    
+    new Chart(distCtx, {
+        type: 'bar',
+        data: {
+            labels: distData.scores,
+            datasets: [{
+                label: 'Number of Tests',
+                data: distData.counts,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Tests'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Score'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Distribution of Test Scores'
+                }
+            }
+        }
+    });
+});
+
+// User-specific chart functionality
+const userPerformanceData = {{ user_performance|tojson }};
+let userChart = null;
+
+function showUserChart(email) {
+    const modal = new bootstrap.Modal(document.getElementById('userChartModal'));
+    const ctx = document.getElementById('userChart').getContext('2d');
+    const userData = userPerformanceData[email];
+
+    if (userChart) {
+        userChart.destroy();
+    }
+
+    userChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: userData.labels,
+            datasets: [{
+                label: 'Test Scores',
+                data: userData.scores,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    title: {
+                        display: true,
+                        text: 'Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date/Time'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Performance History for ${email}`
+                }
+            }
+        }
+    });
+
+    modal.show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-4">Welcome to Cyber Security Training</h1>
+    <p class="lead">Enhance your cyber security knowledge and test your understanding</p>
+    
+    {% if not current_user.is_authenticated %}
+    <div class="mt-4">
+        <a href="{{ url_for('login') }}" class="btn btn-primary me-2">Login</a>
+        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Register</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
