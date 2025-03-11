@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('topics') }}">Topics</a></li>
+            <li class="breadcrumb-item active">{{ topic.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="mb-0">{{ topic.title }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="training-content">
+                {{ topic.content | safe }}
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('topics') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Topics
+                </a>
+                <a href="{{ url_for('start_topic_test', topic_id=topic.id) }}" class="btn btn-primary">
+                    Take Test <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .training-content {
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+    .training-content h3 {
+        color: var(--primary-color);
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .training-content ul, 
+    .training-content ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    .training-content p {
+        margin-bottom: 1rem;
+    }
+    .breadcrumb {
+        background-color: transparent;
+        padding-left: 0;
+        margin-bottom: 1.5rem;
+    }
+    .breadcrumb-item a {
+        color: var(--primary-color);
+    }
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}

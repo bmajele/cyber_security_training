@@ -31,12 +31,20 @@ class Question(db.Model):
     question_text = db.Column(db.String(500), nullable=False)
     correct_answer = db.Column(db.String(500), nullable=False)
     options = db.Column(db.String(1000), nullable=False)  # Store as comma-separated values
+    topic_id = db.Column(db.Integer, db.ForeignKey('security_topic.id'), nullable=True)
 
 class TestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     date_taken = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+class SecurityTopic(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200))
+    content = db.Column(db.Text, nullable=False)
+    questions = db.relationship('Question', backref='topic', lazy=True, cascade='all, delete-orphan')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -259,6 +267,63 @@ def delete_question(question_id):
     db.session.commit()
     flash('Question deleted successfully!')
     return redirect(url_for('manage_questions'))
+
+@app.route('/topics')
+@login_required
+def topics():
+    topics = SecurityTopic.query.all()
+    return render_template('topics.html', topics=topics)
+
+@app.route('/training/<int:topic_id>')
+@login_required
+def training(topic_id):
+    topic = SecurityTopic.query.get_or_404(topic_id)
+    return render_template('training.html', topic=topic)
+
+@app.route('/start_test/<int:topic_id>')
+@login_required
+def start_topic_test(topic_id):
+    topic = SecurityTopic.query.get_or_404(topic_id)
+    questions = Question.query.filter_by(topic_id=topic_id).order_by(func.random()).limit(5).all()
+    if not questions:
+        flash('No questions available for this topic yet.')
+        return redirect(url_for('training', topic_id=topic_id))
+    return render_template('test.html', questions=questions, topic=topic)
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            flash('If an account exists with that email, password reset instructions have been sent.')
+            # In a real application, send an email with reset instructions
+            # For this demo, we'll just redirect to a reset page
+            return redirect(url_for('reset_password', email=email))
+        flash('If an account exists with that email, password reset instructions have been sent.')
+        return redirect(url_for('login'))
+    return render_template('reset_password_request.html')
+
+@app.route('/reset_password/<email>', methods=['GET', 'POST'])
+def reset_password(email):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        if password != confirm_password:
+            flash('Passwords do not match.')
+            return redirect(url_for('reset_password', email=email))
+        user.set_password(password)
+        db.session.commit()
+        flash('Your password has been reset.')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html')
 
 @app.route('/logout')
 @login_required
